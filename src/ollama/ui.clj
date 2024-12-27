@@ -51,7 +51,9 @@
    :showing true
    :title   "Pyjama UI"
    :width   600
+   :min-width 600
    :height  800
+   :min-height 800
    :on-close-request (fn [_] (System/exit 0))
    :icons   [(Image. (io/input-stream (io/resource "delicious.png")))]
    :scene   {:fx/type      :scene

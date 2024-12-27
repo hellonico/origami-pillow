@@ -49,7 +49,9 @@
    :showing true
    :title "Ollama Models"
    :width 1200
+   :min-width 1200
    :height 700
+   :min-height 700
    :scene   {:fx/type      :scene
              :stylesheets  #{"styles.css"}
              :accelerators {[:escape] {:event/type ::close}}
