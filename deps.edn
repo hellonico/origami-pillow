@@ -1,0 +1,13 @@
+{
+ :aliases
+
+ {
+  :chat
+  {;:extra-deps {org.reflections/reflections {:mvn/version "0.10.2"}}
+   ;:paths      ["scripts"]
+   :exec-fn    ollama.ui/-main}
+  }
+  :paths ["src", "resources"]
+ :deps {cljfx/cljfx {:mvn/version "1.9.3"}
+        hellonico/pyjama {:git/url "https://github.com/hellonico/pyjama.git" :git/sha "107e03bef3f3543727278695d81f8a973e303cb1"}
+        org.clojure/core.async {:mvn/version "1.5.648"}}}
