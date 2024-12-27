@@ -1,9 +1,10 @@
 (ns ollama.ui
-  (:require [cljfx.api :as fx]
-            [clojure.java.io :as io]
-            [pyjama.core]
-            [pyjama.state]
-            [pyjama.image])
+ (:require [cljfx.api :as fx]
+           [clojure.core.async :as async]
+           [clojure.java.io :as io]
+           [pyjama.core]
+           [pyjama.state]
+           [pyjama.image])
   (:import (javafx.scene.image Image)
            (javafx.scene.input TransferMode)))
 
@@ -48,9 +49,10 @@
 (defn create-ui [state]
   {:fx/type :stage
    :showing true
-   :title   "Ollama UI"
+   :title   "Pyjama UI"
    :width   600
-   :height  700
+   :height  800
+   :on-close-request (fn [_] (System/exit 0))
    :icons   [(Image. (io/input-stream (io/resource "delicious.png")))]
    :scene   {:fx/type      :scene
              :stylesheets  #{"styles.css"}
@@ -65,8 +67,8 @@
                                                    {:fx/type         :text-field
                                                     :text            (:url state)
                                                     :on-text-changed #(do
-                                                                        (swap! *state assoc :url %)
-                                                                        (pyjama.state/local-models *state))}
+                                                                       (swap! *state assoc :url %)
+                                                                       (async/thread (pyjama.state/local-models *state)))}
                                                    ]}
                                        {:fx/type  :h-box
                                         :spacing  10
@@ -85,20 +87,21 @@
                                        {:fx/type  :h-box
                                         :spacing  30
                                         :children [
-                                                   {:fx/type         :pane
+                                                   {:fx/type         :h-box
+                                                    :spacing         10
                                                     :on-drag-over    (fn [e]
-                                                                       (.acceptTransferModes e (into-array [TransferMode/COPY])))
+                                                                      (.acceptTransferModes e (into-array [TransferMode/COPY])))
                                                     :on-drag-dropped (handle-drag)
                                                     :children        (if (not (empty? (:images @*state)))
-                                                                       (conj
-                                                                         (preview-images)
-                                                                        {:fx/type   :button
-                                                                         :text      "Clear Image"
-                                                                         :on-action #(handle-clear-image %)})
+                                                                      (conj
+                                                                       (preview-images)
+                                                                       {:fx/type   :button
+                                                                        :text      "Clear Images"
+                                                                        :on-action #(handle-clear-image %)})
 
-                                                                       [{:fx/type :label
-                                                                         :text    "Drag and drop an image here"}
-                                                                        ])
+                                                                      [{:fx/type :label
+                                                                        :text    "Drag and drop an image here"}
+                                                                       ])
                                                     }
                                                    ]}
                                        {:fx/type   :button
@@ -107,15 +110,15 @@
                                         }
 
                                        (if (:processing state)
-                                         {:fx/type    :image-view
-                                          :image      spinner-image
-                                          :fit-width  24
-                                          :fit-height 24}
-                                         {
-                                          :fx/type :label
-                                          :text    "Idle"
-                                          }
-                                         )
+                                        {:fx/type    :image-view
+                                         :image      spinner-image
+                                         :fit-width  24
+                                         :fit-height 24}
+                                        {
+                                         :fx/type :label
+                                         :text    "Idle"
+                                         }
+                                        )
                                        {
                                         :fx/type :label
                                         :text    "Response:"}
@@ -125,11 +128,11 @@
                                         :editable  false}]}}})
 
 (def renderer
-  (fx/create-renderer
-    :middleware (fx/wrap-map-desc create-ui)
-    :opts {:fx.opt/map-event-handler event-handler
-           :app-state                *state}))
+ (fx/create-renderer
+  :middleware (fx/wrap-map-desc create-ui)
+  :opts {:fx.opt/map-event-handler event-handler
+         :app-state                *state}))
 
 (defn -main [& args]
-  (pyjama.state/local-models *state)
-  (fx/mount-renderer *state renderer))
+ (pyjama.state/local-models *state)
+ (fx/mount-renderer *state renderer))
