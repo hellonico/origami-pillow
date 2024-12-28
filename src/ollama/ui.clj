@@ -1,5 +1,6 @@
 (ns ollama.ui
- (:require [cljfx.api :as fx]
+  (:gen-class)
+  (:require [cljfx.api :as fx]
            [clojure.core.async :as async]
            [clojure.java.io :as io]
            [pyjama.core]
