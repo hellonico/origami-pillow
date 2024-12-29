@@ -24,6 +24,12 @@
 (def spinner-image
   (Image. (io/input-stream (io/resource "spinner.gif"))))
 
+(def reload-image
+ (Image. (io/input-stream (io/resource "reload.png"))))
+
+(def reloading-image
+ (Image. (io/input-stream (io/resource "reload.gif"))))
+
 (defn preview-images []
   (into []
         (map
@@ -103,6 +109,24 @@
                                                     :items            (:local-models state)
                                                     :value            (:model state)
                                                     :on-value-changed #(swap! *state assoc :model %)}
+                                                   (if (not (:loading @*state))
+                                                   {:fx/type    :image-view
+                                                    :image      reload-image
+                                                    :fit-width  24
+                                                    :fit-height 24
+                                                    :on-mouse-clicked #(async/thread
+                                                                        (swap! *state assoc :loading true)
+                                                                        ; keep for now
+                                                                        (println %)
+                                                                        (pyjama.state/local-models *state)
+                                                                        (swap! *state assoc :loading false)
+                                                                        )
+                                                    }
+                                                   {:fx/type    :image-view
+                                                    :image      reloading-image
+                                                    :fit-width  24
+                                                    :fit-height 24
+                                                    })
                                                    ]}
                                        {:fx/type :label
                                         :text    "Prompt:"}
@@ -134,7 +158,7 @@
                                         :on-action (fn [_] (pyjama.state/handle-submit *state))
                                         }
 
-                                       (if (:processing state)
+                                       (if (:processing @*state)
                                         {:fx/type    :image-view
                                          :image      spinner-image
                                          :fit-width  24
