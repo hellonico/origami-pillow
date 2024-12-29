@@ -47,6 +47,26 @@
 (defmethod event-handler ::close [_]
   (pyjama.state/handle-submit *state))
 
+;
+;(def menu-bar
+;  {:fx/type :menu-bar
+;   :menus [{:fx/type :menu
+;            :text "File"
+;            :items [{:fx/type :menu-item
+;                     :text "Open"
+;                     :on-action {:event/type :menu-item/open}}
+;                    {:fx/type :menu-item
+;                     :text "Exit"
+;                     :on-action {:event/type :menu-item/exit}}]}
+;           {:fx/type :menu
+;            :text "Edit"
+;            :items [{:fx/type :menu-item
+;                     :text "Undo"
+;                     :on-action {:event/type :menu-item/undo}}
+;                    {:fx/type :menu-item
+;                     :text "Redo"
+;                     :on-action {:event/type :menu-item/redo}}]}]})
+
 (defn create-ui [state]
   {:fx/type :stage
    :showing true
@@ -63,7 +83,9 @@
              :root         {:fx/type  :v-box
                             :spacing  10
                             :padding  10
-                            :children [{:fx/type  :h-box
+                            :children [
+                                       ;menu-bar
+                                       {:fx/type  :h-box
                                         :spacing  10
                                         :children [{:fx/type :label
                                                     :text    "URL:"}
