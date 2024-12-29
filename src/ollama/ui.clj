@@ -153,20 +153,24 @@
                                                                        ])
                                                     }
                                                    ]}
-                                       {:fx/type   :button
-                                        :text      "Ask"
-                                        :on-action (fn [_] (pyjama.state/handle-submit *state))
-                                        }
+
 
                                        (if (:processing @*state)
                                         {:fx/type    :image-view
                                          :image      spinner-image
                                          :fit-width  24
                                          :fit-height 24}
+                                        {:fx/type  :h-box
+                                         :spacing  30
+                                         :children [
+                                                    {:fx/type   :button
+                                                     :text      "Ask"
+                                                     :on-action (fn [_] (pyjama.state/handle-submit *state))
+                                                     }
                                         {
                                          :fx/type :label
                                          :text    "Idle"
-                                         }
+                                         }]}
                                         )
                                        {
                                         :fx/type :label
