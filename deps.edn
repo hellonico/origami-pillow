@@ -1,6 +1,5 @@
 {
  :aliases
-
  {
   :build
   {:deps {io.github.clojure/tools.build {:git/tag "v0.10.6" :git/sha "52cf7d6"}} :ns-default build}
@@ -9,5 +8,11 @@
   }
   :paths ["src", "resources"]
  :deps {cljfx/cljfx {:mvn/version "1.9.3"}
-        hellonico/pyjama {:git/url "https://github.com/hellonico/pyjama.git" :git/sha "12b6a2003f8aa1edeb8ff3607658bce30bf1fe7a"}
+        hellonico/pyjama {:git/url "https://github.com/hellonico/pyjama.git" :git/sha "16c91918c36446f502fb1af8591b511510132cab"}
+        hellonico/origami-pink {
+                                :git/url "https://github.com/hellonico/origami-pink.git"
+                                ;:local/root "../origami-pink/pink"
+                                :deps/root "pink"
+                                :git/sha "7c60f7abb67bd5e2fdfe2ada659acb0336a36da8"
+                                }
         org.clojure/core.async {:mvn/version "1.5.648"}}}

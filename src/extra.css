@@ -1,0 +1,23 @@
+/*.table-view .cell {*/
+/*    -fx-min-width: 300px;*/
+/*    -fx-text-fill: hotpink;*/
+/*    !*-fx-fill: hotpink;*!*/
+/*    !*-fx-background-color: pink;*!*/
+/*    !*-fx-color-label-visible: white;*!*/
+/*    -fx-wrap-text: true;*/
+/*    -fx-max-width: 300;*/
+/*    -fx-fit-to-width: 300;*/
+/*    !*-fx-background-radius: 4 4 0 0;*!*/
+/*    !*-fx-border-color: #333;*!*/
+/*    !*-fx-border-width: 0 0 4 0;*!*/
+/*}*/
+
+/*!*.table-view .cell * {*!*/
+/*!*    -fx-fill: hotpink;*!*/
+/*!*}*!*/
+
+/*.table-view .column-resize-line, .tree-table-view .column-resize-line {*/
+/*    -fx-background: hotpink;*/
+/*    -fx-background-color: black;*/
+/*    -fx-padding: 0.0em 0.0416667em 0.0em 0.0416667em; !* 0 0.571429 0 0.571429 *!*/
+/*}*/

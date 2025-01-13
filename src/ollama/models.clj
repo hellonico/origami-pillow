@@ -1,6 +1,7 @@
 (ns ollama.models
   (:gen-class)
   (:require [cljfx.api :as fx]
+            [clojure.java.io :as io]
             [clojure.string :as str]
             [pyjama.core]
             [pyjama.models :refer :all]
@@ -10,30 +11,23 @@
   (atom {:query        ""
          :url          "http://localhost:11434"
          :models       []
-         :show-dialog false
-         :selected nil
+         :show-dialog  false
+         :selected     nil
          :pull         {
                         :status "Idle"
                         :model  ""
                         }
          :local-models []}))
 
-;(defmulti event-handler :event/type)
-
-;(defmethod event-handler :default [e]
-;  (prn (:event/type e) (:fx/event e) (dissoc e :fx/context :fx/event :event/type)))
-
-;(defmethod event-handler ::on-cell-click [event]
-;  (when (= 2 (.getClickCount event))
-;    (println event)))
-
 (defn description-cell-factory []
   (fn [description]
-    {:text (:description description)
-     :graphic {:fx/type :text
-               :text description
-               :wrapping-width 300 ; Adjust this to the desired column width
-               :style "-fx-wrap-text: true;"}}))
+    {:graphic {:fx/type        :text
+               :text           description
+               ;:style "-fx-text-fill: hotpink; -fx-fill: hotpink; "
+               ;:max-width 200 ; Limit the width of the label
+               :wrapping-width 400
+               }}))                                         ; Enable wrapping for the label
+
 
 (defn table-view [{:keys [models query local-models]}]
   {:fx/type     :v-box
@@ -50,7 +44,7 @@
                                  :on-text-changed #(swap! state assoc :query %)}
                                 {:fx/type :label :text "URL"}
                                 {:fx/type :text-field
-                                 :text (:url @state)
+                                 :text    (:url @state)
                                  :on-text-changed
                                  {:event/type :url-updated}
                                  }
@@ -64,30 +58,20 @@
                   :row-factory {:fx/cell-type :table-row
                                 :describe     (fn [row-data]
                                                 {
+                                                 ;:on-resized #(println %)
                                                  :on-drag-detected
                                                  {:event/type :row-key :row row-data}
                                                  :on-mouse-clicked
                                                  {:event/type :row-click
                                                   :row        row-data}})}
-                  ;:row-factory {:fx/cell-type :table-row
-                  ;               :describe (fn [row-data]
-                  ;                           {:on-mouse-clicked
-                  ;                            (fn [event]
-                  ;                              (println event)
-                  ;                              (when (= 2 (:click-count event)) ; Check for double-click
-                  ;                                {:event/type ::row-double-click
-                  ;                                 :row row-data}))})}
                   :columns     [{:fx/type            :table-column
                                  :text               "Name"
                                  :cell-value-factory :name}
-                                ;{:fx/type            :table-column
-                                ; :text               "Description"
-                                ; :cell-value-factory :description}
-                                {:fx/type :table-column
-                                 :text "Description"
+                                {:fx/type            :table-column
+                                 :text               "Description"
                                  :cell-value-factory :description
-                                 :cell-factory {:fx/cell-type :table-cell
-                                                :describe (description-cell-factory)}}
+                                 :cell-factory       {:fx/cell-type :table-cell
+                                                      :describe     (description-cell-factory)}}
                                 {:fx/type            :table-column
                                  :text               "Updated"
                                  :cell-value-factory (fn [row] (:updated row))}
@@ -96,10 +80,10 @@
                                  :cell-value-factory (fn [row] (:pulls row))}
                                 {:fx/type            :table-column
                                  :text               "Capability"
-                                 :cell-value-factory (fn [row] (:capability row) )  }
+                                 :cell-value-factory (fn [row] (:capability row))}
                                 {:fx/type            :table-column
                                  :text               "Sizes"
-                                 :cell-value-factory (fn [row] (str/join ","  (:sizes row)))}
+                                 :cell-value-factory (fn [row] (str/join "," (:sizes row)))}
                                 {:fx/type            :table-column
                                  :text               "Remote"
                                  :cell-value-factory (fn [row]
@@ -122,8 +106,6 @@
                 :children  [
                             {:fx/type :label :text (:name (@state :selected))}
                             {:fx/type :label :text (:description (@state :selected))}
-                            ;{:fx/type :label  :text (:name (@state :selected)) }
-                            ;{:fx/type :label  :text (:name (@state :selected)) }
                             {:fx/type   :h-box
                              :alignment :center
                              :spacing   10
@@ -133,24 +115,24 @@
                                           :on-action (fn [_]
                                                        (pyjama.core/ollama (:url @state) :delete
                                                                            {:model (:name (@state :selected))} identity)
-
                                                        (swap! state
                                                               (fn [current-state]
                                                                 (-> current-state
-
                                                                     (update-in [:pull :model] (constantly (:name (@state :selected))))
                                                                     (update-in [:pull :status] (constantly "deleted"))
                                                                     (assoc :selected nil)
                                                                     (assoc :show-dialog false)
                                                                     )
-                                                                    ))
+                                                                ))
                                                        )}
-                                         {:fx/type   :button
-                                          :text      "Pull"
-                                          :on-action (fn [_]
-                                                       (pyjama.state/pull-model-stream state (:name (@state :selected)))
-                                                       (swap! state assoc :selected nil)
-                                                       (swap! state assoc :show-dialog false))}
+                                         (if (:pulling @state)
+                                           {:fx/type :label}
+                                           {:fx/type   :button
+                                            :text      "Pull"
+                                            :on-action (fn [_]
+                                                         (pyjama.state/pull-model-stream state (:name (@state :selected)))
+                                                         (swap! state assoc :selected nil)
+                                                         (swap! state assoc :show-dialog false))})
                                          {:fx/type   :button
                                           :text      "Cancel"
                                           :on-action (fn [_]
@@ -175,25 +157,17 @@
 
 (defmethod handle-event :row-click [event]
   (swap! state assoc :selected (:row event))
-  (swap! state assoc :show-dialog true)
-
-  )
-;(let [row-data (:row event)]
-;  (pyjama.state/pull-model-stream state (:name row-data)))
-;)
+  (swap! state assoc :show-dialog true))
 
 (defmethod handle-event ::show-dialog [_]
   (swap! state assoc :show-dialog true))
 
 (defmethod handle-event ::on-dialog-close [e]
   (let [button (-> e :fx/event .getButtonData)]
-    ;(println "Dialog closed with:" button) ;; Handle result
     (swap! state assoc :show-dialog false)))
-
 
 (defmethod handle-event :row-key [event]
   (println "row key" event))
-
 
 ;; The main application view
 (defn app-view [_state]
@@ -206,7 +180,11 @@
    :min-height       700
    :on-close-request (fn [_] (System/exit 0))
    :scene            {:fx/type      :scene
-                      :stylesheets  #{"styles.css"}
+                      ;:stylesheets  #{"styles.css"}
+                      :stylesheets  #{
+                                      "extra.css"
+                                      (.toExternalForm (io/resource "terminal.css"))
+                                      }
                       :accelerators {[:escape] {:event/type ::close}}
                       :root         {:fx/type :v-box
                                      :spacing 10
@@ -214,9 +192,8 @@
                                      :children
                                      (if (@state :show-dialog)
                                        [(dialog-view)]
-                                       [(table-view _state)]
-                                                  )
-                                                }}})
+                                       [(table-view _state)])
+                                     }}})
 
 (def renderer
   (fx/create-renderer

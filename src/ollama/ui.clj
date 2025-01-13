@@ -9,12 +9,9 @@
   (:import (javafx.scene.image Image)
            (javafx.scene.input TransferMode)))
 
-(def URL (or (System/getenv "OLLAMA_URL") "http://localhost:11434"))
-(def model "llama3.2")
-
 (defonce *state
-         (atom {:url        URL
-                :model      model
+         (atom {:url        (or (System/getenv "OLLAMA_URL") "http://localhost:11434")
+                :model      "llama3.2"
                 :processing false
                 :images []
                 :models     []
@@ -84,7 +81,10 @@
    :on-close-request (fn [_] (System/exit 0))
    :icons   [(Image. (io/input-stream (io/resource "delicious.png")))]
    :scene   {:fx/type      :scene
-             :stylesheets  #{"styles.css"}
+             :stylesheets  #{
+                             "extra.css"
+                             (.toExternalForm (io/resource "terminal.css"))
+                             }
              :accelerators {[:escape] {:event/type ::close}}
              :root         {:fx/type  :v-box
                             :spacing  10
@@ -94,7 +94,7 @@
                                        {:fx/type  :h-box
                                         :spacing  10
                                         :children [{:fx/type :label
-                                                    :text    "URL:"}
+                                                    :text    "URL"}
                                                    {:fx/type         :text-field
                                                     :text            (:url state)
                                                     :on-text-changed #(do
@@ -104,7 +104,7 @@
                                        {:fx/type  :h-box
                                         :spacing  10
                                         :children [{:fx/type :label
-                                                    :text    "Model:"}
+                                                    :text    "Model"}
                                                    {:fx/type          :combo-box
                                                     :items            (:local-models state)
                                                     :value            (:model state)
@@ -186,6 +186,6 @@
   :opts {:fx.opt/map-event-handler event-handler
          :app-state                *state}))
 
-(defn -main [& args]
+(defn -main [& _]
  (pyjama.state/local-models *state)
  (fx/mount-renderer *state renderer))
