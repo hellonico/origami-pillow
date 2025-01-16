@@ -5,6 +5,7 @@
             [clojure.java.io :as io]
             [pyjama.core]
             [pyjama.fx]
+            [pyjama.components]
             [pyjama.image]
             [pyjama.state])
   (:import (javafx.scene.image Image)
@@ -75,14 +76,7 @@
                                                                                  (async/thread
                                                                                    (pyjama.state/check-connection *state)
                                                                                    (pyjama.state/local-models *state)))}
-                                                            {:fx/type    :image-view
-                                                             :image      (if (get-in state [:ollama :connected])
-                                                                           (pyjama.fx/rsc-image "check.png")
-                                                                           (pyjama.fx/rsc-image "disconnected.png"))
-                                                             :fit-width  24
-                                                             :fit-height 24
-                                                             }
-
+                                                            (pyjama.components/connected-image state)
                                                             ]
 
                                                  }
