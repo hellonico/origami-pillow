@@ -4,6 +4,7 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [pyjama.core]
+            [pyjama.components]
             [pyjama.models :refer :all]
             [pyjama.state]))
 
@@ -42,12 +43,14 @@
                                 {:fx/type         :text-field
                                  :text            query
                                  :on-text-changed #(swap! state assoc :query %)}
-                                {:fx/type :label :text "URL"}
+                                {:fx/type :label :min-width 100 :text "URL"}
                                 {:fx/type :text-field
+                                 :min-width 200
                                  :text    (:url @state)
                                  :on-text-changed
                                  {:event/type :url-updated}
                                  }
+                                (pyjama.components/connected-image @state)
                                 {:fx/type :label
                                  :text    "Status:"}
                                 {:fx/type :label
@@ -147,10 +150,15 @@
   (prn (:event/type e) (:fx/event e) (dissoc e :fx/context :fx/event :event/type)))
 
 (defmethod handle-event :url-updated [new-url]
-  (prn "updated url" (@state :url) " " (:fx/event new-url))
+  ; (prn "updated url" (@state :url) " " (:fx/event new-url))
+
+  ; TODO merge two statements
   (swap! state assoc :local-models [])
   (swap! state assoc :url (:fx/event new-url))
-  (pyjama.state/local-models state))
+  (pyjama.state/check-connection state)
+  (Thread/sleep 500) ; TODO wtf
+  (if (get-in @state [:ollama :connected])
+    (pyjama.state/local-models state)))
 
 ;(defn map-event-handler [e]
 ;  (prn (:event/type e) (:fx/event e) (dissoc e :fx/context :fx/event :event/type)))
@@ -202,6 +210,7 @@
            :fx.opt/map-event-handler handle-event}))
 
 (defn -main [& args]
+  (pyjama.state/check-connection state)
   (pyjama.state/local-models state)
   (pyjama.state/remote-models state)
   (fx/mount-renderer state renderer))
