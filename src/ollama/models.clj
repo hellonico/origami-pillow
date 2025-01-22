@@ -1,10 +1,11 @@
 (ns ollama.models
   (:gen-class)
   (:require [cljfx.api :as fx]
+            [clojure.core.async :as async]
             [clojure.java.io :as io]
             [clojure.string :as str]
-            [pyjama.core]
             [pyjama.components]
+            [pyjama.core]
             [pyjama.models :refer :all]
             [pyjama.state]))
 
@@ -20,13 +21,25 @@
                         }
          :local-models []}))
 
+
+(defn async-reconnect []
+  (async/thread
+  (try
+    (pyjama.state/check-connection state)
+    (Thread/sleep 500)                                      ; TODO wtf
+    (when (get-in @state [:ollama :connected])
+      (pyjama.state/local-models state)
+      (pyjama.state/remote-models state)
+      ))))
+;(println "Connection to " (:url @state) " failed..."))))
+
 (defn description-cell-factory []
   (fn [description]
     {:graphic {:fx/type        :text
                :text           description
                ;:style "-fx-text-fill: hotpink; -fx-fill: hotpink; "
                ;:max-width 200 ; Limit the width of the label
-               :wrapping-width 400
+               :wrapping-width 380
                }}))                                         ; Enable wrapping for the label
 
 
@@ -41,12 +54,13 @@
                   :children    [{:fx/type :label
                                  :text    "Search:"}
                                 {:fx/type         :text-field
+                                 :min-width       400
                                  :text            query
                                  :on-text-changed #(swap! state assoc :query %)}
                                 {:fx/type :label :min-width 100 :text "URL"}
-                                {:fx/type :text-field
-                                 :min-width 200
-                                 :text    (:url @state)
+                                {:fx/type   :text-field
+                                 :min-width 400
+                                 :text      (:url @state)
                                  :on-text-changed
                                  {:event/type :url-updated}
                                  }
@@ -57,11 +71,10 @@
                                  :text    (str (get-in @state [:pull :model]) " > " (get-in @state [:pull :status]))}]}
                  {:fx/type     :table-view
                   :v-box/vgrow :always
-                  :items       (filter-models models query)
+                  :items       ((fn[state] (filter-models models query)) state)
                   :row-factory {:fx/cell-type :table-row
                                 :describe     (fn [row-data]
                                                 {
-                                                 ;:on-resized #(println %)
                                                  :on-drag-detected
                                                  {:event/type :row-key :row row-data}
                                                  :on-mouse-clicked
@@ -88,10 +101,10 @@
                                  :text               "Sizes"
                                  :cell-value-factory (fn [row] (str/join "," (:sizes row)))}
                                 {:fx/type            :table-column
-                                 :text               "Remote"
+                                 :text               "Installed"
                                  :cell-value-factory (fn [row]
                                                        (if (some #(= (:name row) %) (@state :local-models))
-                                                         "☑️"
+                                                         "⚪︎"
                                                          ""))}]}]
    })
 
@@ -113,29 +126,34 @@
                              :alignment :center
                              :spacing   10
                              :children  [
-                                         {:fx/type   :button
-                                          :text      "Delete"
-                                          :on-action (fn [_]
-                                                       (pyjama.core/ollama (:url @state) :delete
-                                                                           {:model (:name (@state :selected))} identity)
-                                                       (swap! state
-                                                              (fn [current-state]
-                                                                (-> current-state
-                                                                    (update-in [:pull :model] (constantly (:name (@state :selected))))
-                                                                    (update-in [:pull :status] (constantly "deleted"))
-                                                                    (assoc :selected nil)
-                                                                    (assoc :show-dialog false)
-                                                                    )
-                                                                ))
-                                                       )}
-                                         (if (:pulling @state)
-                                           {:fx/type :label}
-                                           {:fx/type   :button
-                                            :text      "Pull"
-                                            :on-action (fn [_]
-                                                         (pyjama.state/pull-model-stream state (:name (@state :selected)))
-                                                         (swap! state assoc :selected nil)
-                                                         (swap! state assoc :show-dialog false))})
+                                         (if (get-in @state [:ollama :connected])
+                                           [{:fx/type   :button
+                                             :text      "Delete"
+                                             :on-action (fn [_]
+                                                          (pyjama.core/ollama (:url @state) :delete
+                                                                              {:model (:name (@state :selected))} identity)
+                                                          (swap! state
+                                                                 (fn [current-state]
+                                                                   (-> current-state
+                                                                       (update-in [:pull :model] (constantly (:name (@state :selected))))
+                                                                       (update-in [:pull :status] (constantly "deleted"))
+                                                                       (assoc :selected nil)
+                                                                       (assoc :show-dialog false)
+                                                                       )
+                                                                   ))
+                                                          )}
+
+                                            (if (:pulling @state)
+                                              {:fx/type :label}
+                                              {:fx/type   :button
+                                               :text      "Pull"
+                                               :on-action (fn [_]
+                                                            (pyjama.state/pull-model-stream state (:name (@state :selected)))
+                                                            (swap! state assoc :selected nil)
+                                                            (swap! state assoc :show-dialog false))})
+                                            ]
+                                           (pyjama.components/connected-image @state))
+
                                          {:fx/type   :button
                                           :text      "Cancel"
                                           :on-action (fn [_]
@@ -152,13 +170,9 @@
 (defmethod handle-event :url-updated [new-url]
   ; (prn "updated url" (@state :url) " " (:fx/event new-url))
 
-  ; TODO merge two statements
-  (swap! state assoc :local-models [])
-  (swap! state assoc :url (:fx/event new-url))
-  (pyjama.state/check-connection state)
-  (Thread/sleep 500) ; TODO wtf
-  (if (get-in @state [:ollama :connected])
-    (pyjama.state/local-models state)))
+  ; TODO reconnect
+  (swap! state assoc :local-models [] :url (:fx/event new-url))
+  (async-reconnect))
 
 ;(defn map-event-handler [e]
 ;  (prn (:event/type e) (:fx/event e) (dissoc e :fx/context :fx/event :event/type)))
@@ -182,8 +196,8 @@
   {:fx/type          :stage
    :showing          true
    :title            "Pyjama Models"
-   :width            1200
-   :min-width        1200
+   :width            1300
+   :min-width        1300
    :height           700
    :min-height       700
    :on-close-request (fn [_] (System/exit 0))
@@ -200,8 +214,7 @@
                                      :children
                                      (if (@state :show-dialog)
                                        [(dialog-view)]
-                                       [(table-view _state)])
-                                     }}})
+                                       [(table-view _state)])}}})
 
 (def renderer
   (fx/create-renderer
@@ -210,7 +223,6 @@
            :fx.opt/map-event-handler handle-event}))
 
 (defn -main [& args]
-  (pyjama.state/check-connection state)
-  (pyjama.state/local-models state)
+  (async-reconnect)
   (pyjama.state/remote-models state)
   (fx/mount-renderer state renderer))

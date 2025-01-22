@@ -4,6 +4,17 @@
   :build
   {:deps {io.github.clojure/tools.build {:git/tag "v0.10.6" :git/sha "52cf7d6"}} :ns-default build}
 
+  :pillow
+  {
+   :exec-args {:app-name "pillow" :mainns ollama.models :compile [ollama.models]}
+   }
+
+  :build-tools
+  {:deps      {build-tools/build-tools {:local/root "../build-tools"}}
+   ;:exec-fn   build-tools.core/build-all
+   ;:exec-args {:app-name "pillow" :mainns ollama.models :compile [ollama.models]}
+   }
+
   :chat {:exec-fn    ollama.ui/-main}
   }
   :paths ["src", "resources"]
