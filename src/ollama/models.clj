@@ -24,14 +24,12 @@
 
 (defn async-reconnect []
   (async/thread
-  (try
-    (pyjama.state/check-connection state)
-    (Thread/sleep 500)                                      ; TODO wtf
-    (when (get-in @state [:ollama :connected])
-      (pyjama.state/local-models state)
-      (pyjama.state/remote-models state)
-      ))))
-;(println "Connection to " (:url @state) " failed..."))))
+    (try
+      (pyjama.state/check-connection state)
+      (Thread/sleep 500)                                    ; TODO wtf
+      (when (get-in @state [:ollama :connected])
+        (pyjama.state/local-models state)
+        (pyjama.state/remote-models state)))))
 
 (defn description-cell-factory []
   (fn [description]
@@ -71,7 +69,7 @@
                                  :text    (str (get-in @state [:pull :model]) " > " (get-in @state [:pull :status]))}]}
                  {:fx/type     :table-view
                   :v-box/vgrow :always
-                  :items       ((fn[state] (filter-models models query)) state)
+                  :items       ((fn [state] (filter-models models query)) state)
                   :row-factory {:fx/cell-type :table-row
                                 :describe     (fn [row-data]
                                                 {
@@ -126,32 +124,37 @@
                              :alignment :center
                              :spacing   10
                              :children  [
-                                         (if (get-in @state [:ollama :connected])
-                                           [{:fx/type   :button
-                                             :text      "Delete"
-                                             :on-action (fn [_]
-                                                          (pyjama.core/ollama (:url @state) :delete
-                                                                              {:model (:name (@state :selected))} identity)
-                                                          (swap! state
-                                                                 (fn [current-state]
-                                                                   (-> current-state
-                                                                       (update-in [:pull :model] (constantly (:name (@state :selected))))
-                                                                       (update-in [:pull :status] (constantly "deleted"))
-                                                                       (assoc :selected nil)
-                                                                       (assoc :show-dialog false)
-                                                                       )
-                                                                   ))
-                                                          )}
 
-                                            (if (:pulling @state)
-                                              {:fx/type :label}
-                                              {:fx/type   :button
-                                               :text      "Pull"
-                                               :on-action (fn [_]
-                                                            (pyjama.state/pull-model-stream state (:name (@state :selected)))
-                                                            (swap! state assoc :selected nil)
-                                                            (swap! state assoc :show-dialog false))})
-                                            ]
+                                         (if (get-in @state [:ollama :connected])
+                                           {:fx/type   :h-box
+                                            :alignment :center
+                                            :spacing   10
+                                            :children  [
+                                                        {:fx/type   :button
+                                                         :text      "Delete"
+                                                         :on-action (fn [_]
+                                                                      (pyjama.core/ollama (:url @state) :delete
+                                                                                          {:model (:name (@state :selected))} identity)
+                                                                      (swap! state
+                                                                             (fn [current-state]
+                                                                               (-> current-state
+                                                                                   (update-in [:pull :model] (constantly (:name (@state :selected))))
+                                                                                   (update-in [:pull :status] (constantly "deleted"))
+                                                                                   (assoc :selected nil)
+                                                                                   (assoc :show-dialog false)
+                                                                                   )
+                                                                               ))
+                                                                      )}
+
+                                                        (if (:pulling @state)
+                                                          {:fx/type :label}
+                                                          {:fx/type   :button
+                                                           :text      "Pull"
+                                                           :on-action (fn [_]
+                                                                        (pyjama.state/pull-model-stream state (:name (@state :selected)))
+                                                                        (swap! state assoc :selected nil)
+                                                                        (swap! state assoc :show-dialog false))})
+                                                        ]}
                                            (pyjama.components/connected-image @state))
 
                                          {:fx/type   :button
