@@ -4,22 +4,23 @@
   :build
   {:deps {io.github.clojure/tools.build {:git/tag "v0.10.6" :git/sha "52cf7d6"}} :ns-default build}
 
+  :flower
+  {
+   :exec-args {:app-name "pillow" :mainns ollama.ui :compile [ollama.ui]}
+   }
+
   :pillow
   {
    :exec-args {:app-name "pillow" :mainns ollama.models :compile [ollama.models]}
    }
 
   :build-tools
-  {:deps      {build-tools/build-tools {:local/root "../build-tools"}}
-   ;:exec-fn   build-tools.core/build-all
-   ;:exec-args {:app-name "pillow" :mainns ollama.models :compile [ollama.models]}
-   }
+  {:deps      {build-tools/build-tools {:local/root "../build-tools"}}}
 
   :chat {:exec-fn    ollama.ui/-main}
   }
   :paths ["src", "resources"]
- :deps {cljfx/cljfx {:mvn/version "1.9.3"}
-        hellonico/pyjama
+ :deps {hellonico/pyjama
         {;:git/url "https://github.com/hellonico/pyjama.git"
          ;:git/sha "16c91918c36446f502fb1af8591b511510132cab"
          :local/root "../pyjama"

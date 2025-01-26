@@ -6,20 +6,24 @@
             [clojure.string :as str]
             [pyjama.components]
             [pyjama.core]
+            [pyjama.utils]
             [pyjama.models :refer :all]
-            [pyjama.state]))
+            [pyjama.state])
+  (:import (java.awt Desktop Desktop$Action)
+           (java.net URI)))
 
 (def state
-  (atom {:query        ""
-         :url          "http://localhost:11434"
-         :models       []
-         :show-dialog  false
-         :selected     nil
-         :pull         {
-                        :status "Idle"
-                        :model  ""
-                        }
-         :local-models []}))
+  (atom {:query           ""
+         :url             "http://localhost:11434"
+         :models          []
+         :show-dialog     false
+         :selected        nil
+         :query-installed false
+         :pull            {
+                           :status "Idle"
+                           :model  ""
+                           }
+         :local-models    []}))
 
 
 (defn async-reconnect []
@@ -55,6 +59,11 @@
                                  :min-width       400
                                  :text            query
                                  :on-text-changed #(swap! state assoc :query %)}
+                                {:fx/type             :check-box
+                                 :text                "Installed"
+                                 :selected            (@state :query-installed)
+                                 :on-selected-changed {:event/type ::toggle-checkbox}}
+
                                 {:fx/type :label :min-width 100 :text "URL"}
                                 {:fx/type   :text-field
                                  :min-width 400
@@ -69,18 +78,32 @@
                                  :text    (str (get-in @state [:pull :model]) " > " (get-in @state [:pull :status]))}]}
                  {:fx/type     :table-view
                   :v-box/vgrow :always
-                  :items       ((fn [state] (filter-models models query)) state)
+                  :items       (let [items (filter-models models query)
+                                     filtered (if (:query-installed @state)
+                                                (filter
+                                                  #(not (empty? (get-installed-sizes (@state :local-models) (:name %)))) items)
+                                                items
+                                                )
+                                     ]
+                                 filtered
+                                 )
                   :row-factory {:fx/cell-type :table-row
                                 :describe     (fn [row-data]
                                                 {
-                                                 :on-drag-detected
-                                                 {:event/type :row-key :row row-data}
                                                  :on-mouse-clicked
                                                  {:event/type :row-click
                                                   :row        row-data}})}
                   :columns     [{:fx/type            :table-column
                                  :text               "Name"
-                                 :cell-value-factory :name}
+                                 :cell-value-factory :name
+                                 :cell-factory       {:fx/cell-type :table-cell
+                                                      :describe     (fn [cell-data]
+                                                                      {:text (str cell-data)
+                                                                       :on-mouse-clicked
+                                                                       {:event/type :name-cell-click
+                                                                        :cell-data  cell-data}})}}
+
+
                                 {:fx/type            :table-column
                                  :text               "Description"
                                  :cell-value-factory :description
@@ -101,11 +124,35 @@
                                 {:fx/type            :table-column
                                  :text               "Installed"
                                  :cell-value-factory (fn [row]
-                                                       (if (some #(= (:name row) %) (@state :local-models))
-                                                         "⚪︎"
-                                                         ""))}]}]
+                                                       (str/join "," (get-installed-sizes (@state :local-models) (:name row))))}]}]
    })
 
+(defn pull-option [selected option]
+  {:fx/type   :button
+   :text      option
+   :on-action (fn [_]
+                (pyjama.state/pull-model-stream state (str selected ":" option))
+                (swap! state assoc :selected nil)
+                (swap! state assoc :show-dialog false))}
+  )
+
+(defn delete-option [selected option]
+  {:fx/type   :button
+   :text      option
+   :on-action (fn [_]
+                (pyjama.core/ollama (:url @state) :delete
+                                    {:model (:name (@state :selected))} identity)
+                (swap! state
+                       (fn [current-state]
+                         (-> current-state
+                             (update-in [:pull :model] (constantly (:name (@state :selected))))
+                             (update-in [:pull :status] (constantly "deleted"))
+                             (assoc :selected nil)
+                             (assoc :show-dialog false)
+                             )
+                         ))
+                )}
+  )
 
 (defn dialog-view []
   {:fx/type   :v-box
@@ -114,61 +161,79 @@
    :padding   20
    :children  [{:fx/type :label
                 :text    "Model Dialog"}
-               {:fx/type   :v-box
-                :alignment :center
-                :spacing   10
-                :children  [
-                            {:fx/type :label :text (:name (@state :selected))}
-                            {:fx/type :label :text (:description (@state :selected))}
-                            {:fx/type   :h-box
-                             :alignment :center
-                             :spacing   10
-                             :children  [
+               {:fx/type     :v-box
+                :alignment   :center-left
+                :v-box/vgrow :always
+                :spacing     10
+                :children    [
+                              {:fx/type :label :text (:name (@state :selected))}
+                              {:fx/type :label :text (:description (@state :selected))}
 
-                                         (if (get-in @state [:ollama :connected])
-                                           {:fx/type   :h-box
-                                            :alignment :center
-                                            :spacing   10
-                                            :children  [
-                                                        {:fx/type   :button
-                                                         :text      "Delete"
-                                                         :on-action (fn [_]
-                                                                      (pyjama.core/ollama (:url @state) :delete
-                                                                                          {:model (:name (@state :selected))} identity)
-                                                                      (swap! state
-                                                                             (fn [current-state]
-                                                                               (-> current-state
-                                                                                   (update-in [:pull :model] (constantly (:name (@state :selected))))
-                                                                                   (update-in [:pull :status] (constantly "deleted"))
-                                                                                   (assoc :selected nil)
-                                                                                   (assoc :show-dialog false)
-                                                                                   )
-                                                                               ))
-                                                                      )}
+                              (if (get-in @state [:ollama :connected])
+                                {:fx/type     :v-box
+                                 :alignment   :center-left
+                                 :v-box/vgrow :always
+                                 :spacing     10
+                                 :children    [
 
-                                                        (if (:pulling @state)
-                                                          {:fx/type :label}
-                                                          {:fx/type   :button
-                                                           :text      "Pull"
-                                                           :on-action (fn [_]
-                                                                        (pyjama.state/pull-model-stream state (:name (@state :selected)))
-                                                                        (swap! state assoc :selected nil)
-                                                                        (swap! state assoc :show-dialog false))})
-                                                        ]}
-                                           (pyjama.components/connected-image @state))
+                                               {:fx/type     :h-box
+                                                :v-box/vgrow :always
+                                                :spacing     10
+                                                ;:padding     20
+                                                :children
+                                                (let [can_delete (get-installed-sizes (:local-models @state) (:name (@state :selected)))]
+                                                  (if (> (count can_delete) 0)
+                                                    (into [{:fx/type :label :text "Delete:"}]
+                                                          (map (partial delete-option (:name (@state :selected)))
+                                                               can_delete
+                                                               ))
+                                                    [{:fx/type :label :text "Model not installed."}]
+                                                    ))
+                                                }
 
-                                         {:fx/type   :button
-                                          :text      "Cancel"
-                                          :on-action (fn [_]
-                                                       (swap! state assoc :selected nil)
-                                                       (swap! state assoc :show-dialog false))}]}]}]})
+                                               (if (:pulling @state)
+                                                 {:fx/type :label}
+
+                                                 {:fx/type     :h-box
+                                                  :v-box/vgrow :always
+                                                  ;:alignment :center
+                                                  :spacing     10
+                                                  ;:padding     20
+                                                  :children    (let [selected (:name (@state :selected))
+                                                                     sizes (get-sizes (:models @state) selected)
+                                                                     options (into [{:fx/type :label :text "Pull:"}]
+                                                                                   (map (partial pull-option (:name (@state :selected)))
+                                                                                        sizes))]
+                                                                 ;(println selected)
+                                                                 ;(println sizes)
+                                                                 options
+                                                                 )
+                                                  }
+                                                 )
+
+                                               {:fx/type   :button
+                                                :text      "Cancel"
+                                                :on-action (fn [_]
+                                                             (swap! state assoc :selected nil)
+                                                             (swap! state assoc :show-dialog false))}
+
+                                               ]}
+                                (pyjama.components/connected-image @state))
+
+                              ;]}
+                              ]}]})
 
 (defmulti handle-event :event/type)
 
 ; README: keep those two functions as battle reminder ;)
 
 (defmethod handle-event :default [e]
-  (prn (:event/type e) (:fx/event e) (dissoc e :fx/context :fx/event :event/type)))
+  ;(prn (:event/type e) (:fx/event e) (dissoc e :fx/context :fx/event :event/type))
+  )
+
+(defmethod handle-event :name-cell-click [event]
+  ;(println "Name cell clicked:" (:cell-data event))
+  (pyjama.fx/open-url (str "https://ollama.com/library/" (:cell-data event))))
 
 (defmethod handle-event :url-updated [new-url]
   ; (prn "updated url" (@state :url) " " (:fx/event new-url))
@@ -176,6 +241,9 @@
   ; TODO reconnect
   (swap! state assoc :local-models [] :url (:fx/event new-url))
   (async-reconnect))
+
+(defmethod handle-event ::toggle-checkbox [_]
+  (swap! state update :query-installed not))
 
 ;(defn map-event-handler [e]
 ;  (prn (:event/type e) (:fx/event e) (dissoc e :fx/context :fx/event :event/type)))
@@ -226,6 +294,7 @@
            :fx.opt/map-event-handler handle-event}))
 
 (defn -main [& args]
+  (pyjama.utils/javafx-runtime-version)
   (async-reconnect)
   (pyjama.state/remote-models state)
   (fx/mount-renderer state renderer))

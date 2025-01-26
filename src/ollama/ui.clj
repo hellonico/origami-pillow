@@ -3,9 +3,9 @@
   (:require [cljfx.api :as fx]
             [clojure.core.async :as async]
             [clojure.java.io :as io]
+            [pyjama.components]
             [pyjama.core]
             [pyjama.fx]
-            [pyjama.components]
             [pyjama.image]
             [pyjama.state])
   (:import (javafx.scene.image Image)
@@ -52,113 +52,118 @@
    :height           800
    :min-height       800
    :on-close-request (fn [_] (System/exit 0))
-   :icons            [(Image. (io/input-stream (io/resource "delicious.png")))]
+   :icons            [(Image. (io/input-stream (io/resource "flower.png")))]
    :scene            {:fx/type      :scene
                       :stylesheets  #{
                                       "extra.css"
                                       (.toExternalForm (io/resource "terminal.css"))
                                       }
                       :accelerators {[:escape] {:event/type ::close}}
-                      :root         {:fx/type  :v-box
-                                     :spacing  10
-                                     :padding  10
-                                     :children [
-                                                ;menu-bar
-                                                {:fx/type  :h-box
-                                                 :spacing  10
-                                                 :children [{:fx/type   :label
-                                                             :min-width 100
-                                                             :text      "URL"}
-                                                            {:fx/type         :text-field
-                                                             :text            (:url state)
-                                                             :on-text-changed #(do
-                                                                                 (swap! *state assoc :url %)
-                                                                                 (async/thread
-                                                                                   (pyjama.state/check-connection *state)
-                                                                                   (pyjama.state/local-models *state)))}
-                                                            (pyjama.components/connected-image state)
-                                                            ]
+                      :root         {:fx/type     :v-box
+                                     :spacing     10
+                                     :max-height  Double/MAX_VALUE
+                                     ;:v-box/vgrow :always
+                                     :padding     10
+                                     :children    [
+                                                   ;menu-bar
+                                                   {:fx/type  :h-box
+                                                    :spacing  10
+                                                    :children [{:fx/type   :label
+                                                                :min-width 100
+                                                                :text      "URL"}
+                                                               {:fx/type         :text-field
+                                                                :text            (:url state)
+                                                                :max-width       Double/MAX_VALUE
+                                                                :on-text-changed #(do
+                                                                                    (swap! *state assoc :url %)
+                                                                                    (async/thread
+                                                                                      (pyjama.state/check-connection *state)
+                                                                                      (pyjama.state/local-models *state)))}
+                                                               (pyjama.components/connected-image state)
+                                                               ]
 
-                                                 }
-                                                {:fx/type  :h-box
-                                                 :spacing  10
-                                                 :children [{:fx/type   :label
-                                                             :min-width 100
-                                                             :text      "Model"}
-                                                            {:fx/type          :combo-box
-                                                             :items            (:local-models state)
-                                                             :value            (:model state)
-                                                             :on-value-changed #(swap! *state assoc :model %)}
-                                                            (if (not (:loading @*state))
-                                                              {:fx/type          :image-view
-                                                               :image            (pyjama.fx/rsc-image "reload.png")
-                                                               :fit-width        24
-                                                               :fit-height       24
-                                                               :on-mouse-clicked #(async/thread
-                                                                                    (swap! *state assoc :loading true)
-                                                                                    ; keep for now
-                                                                                    (println %)
-                                                                                    (pyjama.state/local-models *state)
-                                                                                    (swap! *state assoc :loading false)
-                                                                                    )
-                                                               }
-                                                              {:fx/type    :image-view
-                                                               :image      (pyjama.fx/rsc-image "reload.gif")
-                                                               :fit-width  24
-                                                               :fit-height 24
-                                                               })
-                                                            ]}
-                                                {:fx/type :label
-                                                 :text    "Prompt"}
-                                                {:fx/type         :text-area
-                                                 :text            (:prompt state)
-                                                 :on-text-changed #(swap! *state assoc :prompt %)}
-                                                {:fx/type  :h-box
-                                                 :spacing  30
-                                                 :children [
-                                                            {:fx/type         :h-box
-                                                             :spacing         10
-                                                             :on-drag-over    (fn [e]
-                                                                                (.acceptTransferModes e (into-array [TransferMode/COPY])))
-                                                             :on-drag-dropped (handle-drag)
-                                                             :children        (if (not (empty? (:images @*state)))
-                                                                                (conj
-                                                                                  (preview-images)
-                                                                                  {:fx/type   :button
-                                                                                   :text      "Clear Images"
-                                                                                   :on-action #(handle-clear-image %)})
+                                                    }
+                                                   {:fx/type  :h-box
+                                                    :spacing  10
+                                                    :children [{:fx/type   :label
+                                                                :min-width 100
+                                                                :text      "Model"}
+                                                               {:fx/type          :combo-box
+                                                                :items            (:local-models state)
+                                                                :value            (:model state)
+                                                                :on-value-changed #(swap! *state assoc :model %)}
+                                                               (if (not (:loading @*state))
+                                                                 {:fx/type          :image-view
+                                                                  :image            (pyjama.fx/rsc-image "reload.png")
+                                                                  :fit-width        24
+                                                                  :fit-height       24
+                                                                  :on-mouse-clicked #(async/thread
+                                                                                       (swap! *state assoc :loading true)
+                                                                                       ; keep for now
+                                                                                       ;(println %)
+                                                                                       (pyjama.state/local-models *state)
+                                                                                       (swap! *state assoc :loading false))
+                                                                  }
+                                                                 {:fx/type    :image-view
+                                                                  :image      (pyjama.fx/rsc-image "reload.gif")
+                                                                  :fit-width  24
+                                                                  :fit-height 24
+                                                                  })
+                                                               ]}
+                                                   {:fx/type :label
+                                                    :text    "Prompt"}
+                                                   {:fx/type         :text-area
+                                                    :text            (:prompt state)
+                                                    :on-text-changed #(swap! *state assoc :prompt %)}
+                                                   {:fx/type  :h-box
+                                                    :spacing  30
+                                                    :children [
+                                                               {:fx/type         :h-box
+                                                                :spacing         10
+                                                                :max-height      Double/MAX_VALUE
+                                                                :on-drag-over    (fn [e]
+                                                                                   (.acceptTransferModes e (into-array [TransferMode/COPY])))
+                                                                :on-drag-dropped (handle-drag)
+                                                                :children        (if (not (empty? (:images @*state)))
+                                                                                   (conj
+                                                                                     (preview-images)
+                                                                                     {:fx/type   :button
+                                                                                      :text      "Clear Images"
+                                                                                      :on-action #(handle-clear-image %)})
 
-                                                                                [{:fx/type :label
-                                                                                  :text    "Drag and drop an image here"}
-                                                                                 ])
-                                                             }
-                                                            ]}
+                                                                                   [{:fx/type :label
+                                                                                     :text    "Drag and drop an image here"}
+                                                                                    ])
+                                                                }
+                                                               ]}
 
 
-                                                (if (:processing @*state)
-                                                  {:fx/type    :image-view
-                                                   :image      (pyjama.fx/rsc-image "spinner.gif")
-                                                   :fit-width  24
-                                                   :fit-height 24}
-                                                  {:fx/type  :h-box
-                                                   :spacing  30
-                                                   :children [
-                                                              {:fx/type   :button
-                                                               :text      "Ask"
-                                                               :on-action (fn [_] (pyjama.state/handle-submit *state))
-                                                               }
-                                                              {
-                                                               :fx/type :label
-                                                               :text    "Idle"
-                                                               }]}
-                                                  )
-                                                {
-                                                 :fx/type :label
-                                                 :text    "Response:"}
-                                                {:fx/type   :text-area
-                                                 :wrap-text true
-                                                 :text      (:response state)
-                                                 :editable  false}]}}})
+                                                   (if (:processing @*state)
+                                                     {:fx/type    :image-view
+                                                      :image      (pyjama.fx/rsc-image "spinner.gif")
+                                                      :fit-width  24
+                                                      :fit-height 24}
+                                                     {:fx/type  :h-box
+                                                      :spacing  30
+                                                      ;:v-box/vgrow :always
+                                                      :children [
+                                                                 {:fx/type   :button
+                                                                  :text      "Ask"
+                                                                  :on-action (fn [_] (pyjama.state/handle-submit *state))
+                                                                  }
+                                                                 {
+                                                                  :fx/type :label
+                                                                  :text    "Idle"
+                                                                  }]}
+                                                     )
+                                                   {
+                                                    :fx/type :label
+                                                    :text    "Response:"}
+                                                   {:fx/type   :text-area
+                                                    :v-box/vgrow :always
+                                                    :wrap-text true
+                                                    :text      (:response state)
+                                                    :editable  false}]}}})
 
 (def renderer
   (fx/create-renderer
@@ -167,6 +172,7 @@
            :app-state                *state}))
 
 (defn -main [& _]
+  (pyjama.utils/javafx-runtime-version)
   (pyjama.state/local-models *state)
   (pyjama.state/check-connection *state)
   (fx/mount-renderer *state renderer))
