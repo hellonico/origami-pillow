@@ -6,11 +6,9 @@
             [clojure.string :as str]
             [pyjama.components]
             [pyjama.core]
-            [pyjama.utils]
             [pyjama.models :refer :all]
-            [pyjama.state])
-  (:import (java.awt Desktop Desktop$Action)
-           (java.net URI)))
+            [pyjama.state]
+            [pyjama.utils]))
 
 (def state
   (atom {:query           ""
