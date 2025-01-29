@@ -6,6 +6,7 @@
             [pyjama.components]
             [pyjama.core]
             [pyjama.fx]
+            [pyjama.fx.utils]
             [pyjama.image]
             [pyjama.state])
   (:import (javafx.scene.image Image)
@@ -172,7 +173,7 @@
            :app-state                *state}))
 
 (defn -main [& _]
-  (pyjama.utils/javafx-runtime-version)
+  (pyjama.fx.utils/javafx-runtime-version)
   (pyjama.state/local-models *state)
   (pyjama.state/check-connection *state)
   (fx/mount-renderer *state renderer))

@@ -8,7 +8,7 @@
             [pyjama.core]
             [pyjama.models :refer :all]
             [pyjama.state]
-            [pyjama.utils]))
+            [pyjama.fx.utils]))
 
 (def state
   (atom {:query           ""
@@ -292,7 +292,7 @@
            :fx.opt/map-event-handler handle-event}))
 
 (defn -main [& args]
-  (pyjama.utils/javafx-runtime-version)
+  (pyjama.fx.utils/javafx-runtime-version)
   (async-reconnect)
   (pyjama.state/remote-models state)
   (fx/mount-renderer state renderer))
