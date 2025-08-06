@@ -546,3 +546,4 @@
 /.clj-kondo/.cache/v1/lock
 /.clj-kondo/imports/potemkin/potemkin/potemkin/namespaces.clj
 /.clj-kondo/imports/potemkin/potemkin/config.edn
+/.clj-kondo/
