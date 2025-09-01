@@ -2,7 +2,7 @@
  :aliases
  {
   :build
-  {:deps {io.github.clojure/tools.build {:git/tag "v0.10.6" :git/sha "52cf7d6"}} :ns-default build}
+  {:deps {io.github.clojure/tools.build {:git/tag "v0.10.10" :git/sha "deedd623"}} :ns-default build}
 
   :flower
   {
@@ -15,25 +15,26 @@
    }
 
   :build-tools
-  {:deps      {build-tools/build-tools {:local/root "../build-tools"}}}
+  {:deps {build-tools/build-tools {:local/root "../build-tools"}}}
 
-  :chat {:exec-fn    ollama.ui/-main}
+  :chat {:exec-fn ollama.ui/-main}
   }
-  :paths ["src", "resources"]
- :deps {hellonico/pyjama
-        {;:git/url "https://github.com/hellonico/pyjama.git"
-         ;:git/sha "16c91918c36446f502fb1af8591b511510132cab"
-         :local/root "../pyjama"
-         }
-        hellonico/pyjama-fx
-        {;:git/url "https://github.com/hellonico/pyjama.git"
-         ;:git/sha "16c91918c36446f502fb1af8591b511510132cab"
-         :local/root "../pyjama-fx"
-         }
-        hellonico/origami-pink {
-                                ;:git/url "https://github.com/hellonico/origami-pink.git"
-                                :local/root "../origami-pink/pink"
-                                ;:deps/root "pink"
-                                ;:git/sha "7c60f7abb67bd5e2fdfe2ada659acb0336a36da8"
-                                }
-        org.clojure/core.async {:mvn/version "1.5.648"}}}
+ :paths ["src", "resources"]
+ :deps  {hellonico/pyjama
+         {;:git/url "https://github.com/hellonico/pyjama.git"
+          ;:git/sha "16c91918c36446f502fb1af8591b511510132cab"
+          :local/root "../pyjama"
+          }
+         hellonico/pyjama-fx
+         {;:git/url "https://github.com/hellonico/pyjama.git"
+          ;:git/sha "16c91918c36446f502fb1af8591b511510132cab"
+          :local/root "../pyjama-fx"
+          }
+         hellonico/origami-pink {
+                                 ;:git/url "https://github.com/hellonico/origami-pink.git"
+                                 :local/root "../origami-pink/pink"
+                                 ;:deps/root "pink"
+                                 ;:git/sha "7c60f7abb67bd5e2fdfe2ada659acb0336a36da8"
+                                 }
+         ;org.clojure/core.async {:mvn/version "1.5.648"}
+         }}
